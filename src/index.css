@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #f7efe7;
+  --bg-alt: #f1e4d7;
+  --card-bg: rgba(255, 251, 247, 0.9);
+  --accent: #9d6249;
+  --text-strong: #2f2015;
+  --text-muted: #655649;
+  --shadow-soft: 0 10px 30px rgba(58, 39, 21, 0.07);
+  --shadow-strong: 0 22px 54px rgba(45, 28, 14, 0.16);
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+
+  font-family: var(--font-body);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-muted);
+  background:
+    radial-gradient(circle at top left, rgba(181, 131, 91, 0.16), transparent 32%),
+    radial-gradient(circle at top right, rgba(122, 82, 59, 0.1), transparent 25%),
+    linear-gradient(180deg, var(--bg) 0%, #f9f3ec 55%, var(--bg-alt) 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: transparent;
+}
+
+body,
+button,
+input,
+textarea {
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+#root {
+  min-height: 100vh;
+}
