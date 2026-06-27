@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import hero from "../assets/images/hero.jpg";
 
 import catCushion from "../assets/images/cat-cushion.jpg";
+import catTable from "../assets/images/cat-table.jpg";
 import table1 from '../assets/images/table-1.jpg'
 import table2 from '../assets/images/table-2.jpg'
 
