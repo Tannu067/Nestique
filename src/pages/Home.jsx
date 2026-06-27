@@ -1,20 +1,12 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import hero from '../assets/images/hero.jpg'
-import cushion1 from '../assets/images/cushion-1.jpg'
-import cushion2 from '../assets/images/cushion-2.jpg'
-import table1 from '../assets/images/table-1.jpg'
-import table2 from '../assets/images/table-2.jpg'
 import story from '../assets/images/story.jpg'
 import catCushion from '../assets/images/cat-cushion.jpg'
 import catTable from '../assets/images/cat-table.jpg'
 import catApron from '../assets/images/cat-apron.jpg'
 
-const featured = [
-  { title: 'Moss Linen Cushion', price: '₹1,240', image: cushion1, tag: 'Best seller' },
-  { title: 'Sable Dining Table', price: '₹18,900', image: table1, tag: 'New arrival' },
-  { title: 'Ivory Stitch Cushion', price: '₹1,490', image: cushion2, tag: 'Hand finished' },
-  { title: 'Oak Edge Table', price: '₹21,500', image: table2, tag: 'Studio pick' },
-]
+const API_BASE = 'http://localhost:5000'
 
 const highlights = [
   { value: '48 hrs', label: 'Made to order' },
@@ -40,18 +32,67 @@ const categories = [
   },
 ]
 
+function formatPrice(price) {
+  return `₹${Number(price || 0).toLocaleString('en-IN')}`
+}
+
+function formatCategory(category) {
+  return String(category || '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 export default function Home({
   onAddToCart,
   onToggleWishlist,
   searchTerm = '',
-  wishlistedTitles = new Set(),
+  wishlistedIds = new Set(),
 }) {
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        setError('')
+
+        const response = await fetch(`${API_BASE}/api/products`, {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to load products (${response.status})`)
+        }
+
+        const data = await response.json()
+        setProducts(Array.isArray(data) ? data : [])
+      } catch (fetchError) {
+        if (fetchError.name !== 'AbortError') {
+          setError(fetchError.message)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchProducts()
+
+    return () => controller.abort()
+  }, [])
+
   const normalizedSearch = searchTerm.trim().toLowerCase()
-  const filteredFeatured = featured.filter((item) => {
+  const filteredProducts = products.filter((item) => {
     if (!normalizedSearch) return true
     return (
-      item.title.toLowerCase().includes(normalizedSearch) ||
-      item.tag.toLowerCase().includes(normalizedSearch)
+      item.name?.toLowerCase().includes(normalizedSearch) ||
+      item.category?.toLowerCase().includes(normalizedSearch) ||
+      item.description?.toLowerCase().includes(normalizedSearch)
     )
   })
 
@@ -115,44 +156,50 @@ export default function Home({
           <h2>Signature items for your next room refresh.</h2>
         </div>
 
-        <div className="product-grid">
-          {filteredFeatured.length > 0 ? (
-            filteredFeatured.map((item) => (
-              <article key={item.title} className="product-card">
-                <div className="product-image-wrap">
-                  <img src={item.image} alt={item.title} />
-                  <span>{item.tag}</span>
-                </div>
-                <div className="product-copy">
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>Natural textures and thoughtful finishing for everyday use.</p>
+        {loading ? (
+          <p className="empty-state">Loading products...</p>
+        ) : error ? (
+          <p className="empty-state">{error}</p>
+        ) : (
+          <div className="product-grid">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((item) => (
+                <article key={item._id} className="product-card">
+                  <div className="product-image-wrap">
+                    <img src={item.imageUrl} alt={item.name} />
+                    <span>{formatCategory(item.category)}</span>
                   </div>
-                  <div className="product-meta">
-                    <strong>{item.price}</strong>
-                    <div className="product-actions">
-                      <button type="button" className="product-action" onClick={onAddToCart}>
-                        Add to Cart
-                      </button>
-                      <button
-                        type="button"
-                        className={`product-action product-action--heart ${
-                          wishlistedTitles.has(item.title) ? 'is-liked' : ''
-                        }`}
-                        aria-pressed={wishlistedTitles.has(item.title)}
-                        onClick={() => onToggleWishlist(item)}
-                      >
-                        {wishlistedTitles.has(item.title) ? '♥' : '♡'}
-                      </button>
+                  <div className="product-copy">
+                    <div>
+                      <h3>{item.name}</h3>
+                      <p>{item.description || 'Natural textures and thoughtful finishing for everyday use.'}</p>
+                    </div>
+                    <div className="product-meta">
+                      <strong>{formatPrice(item.price)}</strong>
+                      <div className="product-actions">
+                        <button type="button" className="product-action" onClick={() => onAddToCart(item)}>
+                          Add to Cart
+                        </button>
+                        <button
+                          type="button"
+                          className={`product-action product-action--heart ${
+                            wishlistedIds.has(item._id) ? 'is-liked' : ''
+                          }`}
+                          aria-pressed={wishlistedIds.has(item._id)}
+                          onClick={() => onToggleWishlist(item)}
+                        >
+                          {wishlistedIds.has(item._id) ? '♥' : '♡'}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))
-          ) : (
-            <p className="empty-state">No products found.</p>
-          )}
-        </div>
+                </article>
+              ))
+            ) : (
+              <p className="empty-state">No products found.</p>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="story-section" id="story">

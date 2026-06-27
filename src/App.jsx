@@ -9,26 +9,26 @@ import Shop from './pages/Shop'
 import './App.css'
 
 export default function App() {
-  const [cartCount, setCartCount] = useState(0)
+  const [cartItems, setCartItems] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isWishlistOpen, setIsWishlistOpen] = useState(false)
   const [wishlistItems, setWishlistItems] = useState([])
 
-  const handleAddToCart = () => {
-    setCartCount((count) => count + 1)
+  const handleAddToCart = (item) => {
+    setCartItems((current) => [...current, item])
   }
 
   const handleToggleWishlist = (item) => {
     setWishlistItems((current) => {
-      const exists = current.some((entry) => entry.title === item.title)
+      const exists = current.some((entry) => entry._id === item._id)
       return exists
-        ? current.filter((entry) => entry.title !== item.title)
+        ? current.filter((entry) => entry._id !== item._id)
         : [...current, item]
     })
   }
 
-  const wishlistedTitles = new Set(wishlistItems.map((item) => item.title))
+  const wishlistedIds = new Set(wishlistItems.map((item) => item._id))
 
   const handleToggleSearch = () => {
     setIsSearchOpen((current) => !current)
@@ -43,7 +43,7 @@ export default function App() {
   return (
     <>
       <Navbar
-        cartCount={cartCount}
+        cartCount={cartItems.length}
         isSearchOpen={isSearchOpen}
         onSearchChange={setSearchTerm}
         onToggleSearch={handleToggleSearch}
@@ -68,12 +68,12 @@ export default function App() {
           {wishlistItems.length > 0 ? (
             <div className="wishlist-grid">
               {wishlistItems.map((item) => (
-                <article key={item.title} className="wishlist-card">
-                  <img src={item.image} alt={item.title} />
+                <article key={item._id} className="wishlist-card">
+                  <img src={item.imageUrl} alt={item.name} />
                   <div>
-                    <h3>{item.title}</h3>
+                    <h3>{item.name}</h3>
                     <p>{item.category}</p>
-                    <strong>{item.price}</strong>
+                    <strong>₹{item.price}</strong>
                   </div>
                 </article>
               ))}
@@ -92,7 +92,7 @@ export default function App() {
               onAddToCart={handleAddToCart}
               onToggleWishlist={handleToggleWishlist}
               searchTerm={searchTerm}
-              wishlistedTitles={wishlistedTitles}
+              wishlistedIds={wishlistedIds}
             />
           }
         />
@@ -103,11 +103,19 @@ export default function App() {
               onAddToCart={handleAddToCart}
               onToggleWishlist={handleToggleWishlist}
               searchTerm={searchTerm}
-              wishlistedTitles={wishlistedTitles}
+              wishlistedIds={wishlistedIds}
             />
           }
         />
-        <Route path="/cart" element={<Cart cartCount={cartCount} />} />
+        <Route
+          path="/cart"
+          element={
+            <Cart
+              cartItems={cartItems}
+              onClearCart={() => setCartItems([])}
+            />
+          }
+        />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

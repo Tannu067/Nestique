@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import cushion1 from '../assets/images/cushion-1.jpg'
 import cushion2 from '../assets/images/cushion-2.jpg'
 import cushion3 from '../assets/images/cushion-3.jpg'
@@ -7,29 +8,79 @@ import table3 from '../assets/images/table-3.jpg'
 import apron1 from '../assets/images/apron-1.jpg'
 import apron2 from '../assets/images/apron-2.jpg'
 
-const products = [
-  { category: 'Cushion', title: 'Moss Linen Cushion', price: '₹1,240', image: cushion1 },
-  { category: 'Table', title: 'Sable Dining Table', price: '₹18,900', image: table1 },
-  { category: 'Cushion', title: 'Ivory Stitch Cushion', price: '₹1,490', image: cushion2 },
-  { category: 'Table', title: 'Oak Edge Table', price: '₹21,500', image: table2 },
-  { category: 'Cushion', title: 'Clay Woven Cushion', price: '₹1,650', image: cushion3 },
-  { category: 'Table', title: 'Pebble Side Table', price: '₹9,800', image: table3 },
-  { category: 'Apron', title: 'Field Apron', price: '₹890', image: apron1 },
-  { category: 'Apron', title: 'Studio Apron', price: '₹920', image: apron2 },
-]
+const API_BASE = 'http://localhost:5000'
+
+const categoryImages = {
+  'cushion-cover': cushion1,
+  'table-cover': table1,
+  apron: apron1,
+}
+
+function formatPrice(price) {
+  return `₹${Number(price || 0).toLocaleString('en-IN')}`
+}
+
+function formatCategory(category) {
+  return String(category || '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function getProductImage(product) {
+  return product.imageUrl || categoryImages[product.category] || cushion2
+}
 
 export default function Shop({
   onAddToCart,
   onToggleWishlist,
   searchTerm = '',
-  wishlistedTitles = new Set(),
+  wishlistedIds = new Set(),
 }) {
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        setError('')
+
+        const response = await fetch(`${API_BASE}/api/products`, {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to load products (${response.status})`)
+        }
+
+        const data = await response.json()
+        setProducts(Array.isArray(data) ? data : [])
+      } catch (fetchError) {
+        if (fetchError.name !== 'AbortError') {
+          setError(fetchError.message)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchProducts()
+
+    return () => controller.abort()
+  }, [])
+
   const normalizedSearch = searchTerm.trim().toLowerCase()
   const filteredProducts = products.filter((item) => {
     if (!normalizedSearch) return true
     return (
-      item.title.toLowerCase().includes(normalizedSearch) ||
-      item.category.toLowerCase().includes(normalizedSearch)
+      item.name?.toLowerCase().includes(normalizedSearch) ||
+      item.category?.toLowerCase().includes(normalizedSearch) ||
+      item.description?.toLowerCase().includes(normalizedSearch)
     )
   })
 
@@ -47,44 +98,50 @@ export default function Shop({
       </section>
 
       <section className="section">
-        <div className="product-grid product-grid--shop">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map((item) => (
-              <article key={item.title} className="product-card">
-                <div className="product-image-wrap">
-                  <img src={item.image} alt={item.title} />
-                  <span>{item.category}</span>
-                </div>
-                <div className="product-copy">
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>Designed for everyday spaces and easy layering.</p>
+        {loading ? (
+          <p className="empty-state">Loading products...</p>
+        ) : error ? (
+          <p className="empty-state">{error}</p>
+        ) : (
+          <div className="product-grid product-grid--shop">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((item) => (
+                <article key={item._id} className="product-card">
+                  <div className="product-image-wrap">
+                    <img src={getProductImage(item)} alt={item.name} />
+                    <span>{formatCategory(item.category)}</span>
                   </div>
-                  <div className="product-meta">
-                    <strong>{item.price}</strong>
-                    <div className="product-actions">
-                      <button type="button" className="product-action" onClick={onAddToCart}>
-                        Add to Cart
-                      </button>
-                      <button
-                        type="button"
-                        className={`product-action product-action--heart ${
-                          wishlistedTitles.has(item.title) ? 'is-liked' : ''
-                        }`}
-                        aria-pressed={wishlistedTitles.has(item.title)}
-                        onClick={() => onToggleWishlist(item)}
-                      >
-                        {wishlistedTitles.has(item.title) ? '♥' : '♡'}
-                      </button>
+                  <div className="product-copy">
+                    <div>
+                      <h3>{item.name}</h3>
+                      <p>{item.description || 'Designed for everyday spaces and easy layering.'}</p>
+                    </div>
+                    <div className="product-meta">
+                      <strong>{formatPrice(item.price)}</strong>
+                      <div className="product-actions">
+                        <button type="button" className="product-action" onClick={() => onAddToCart(item)}>
+                          Add to Cart
+                        </button>
+                        <button
+                          type="button"
+                          className={`product-action product-action--heart ${
+                            wishlistedIds.has(item._id) ? 'is-liked' : ''
+                          }`}
+                          aria-pressed={wishlistedIds.has(item._id)}
+                          onClick={() => onToggleWishlist(item)}
+                        >
+                          {wishlistedIds.has(item._id) ? '♥' : '♡'}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))
-          ) : (
-            <p className="empty-state">No products found.</p>
-          )}
-        </div>
+                </article>
+              ))
+            ) : (
+              <p className="empty-state">No products found.</p>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="section section--soft">
